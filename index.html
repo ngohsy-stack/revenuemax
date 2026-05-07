@@ -137,6 +137,7 @@
         .table-area { 
             overflow-x: auto; 
             margin-top: -25px; 
+            max-height: 500px;
         }
         
         table {
@@ -153,6 +154,8 @@
             font-family: 'Lato', sans-serif;
             font-weight: 400; 
             border: 1px solid var(--brand-teal);
+            position: sticky;
+            top: 0;
         }
         
         td { 
@@ -171,7 +174,7 @@
             outline: 2px solid var(--brand-teal); 
         }
         
-        /* Bold text for the max row (Q=5) */
+        /* Bold text for the max row (Q=5.5) */
         tr.max-row td {
             font-weight: 700;
         }
@@ -197,7 +200,7 @@
         <div class="theory-section">
             <div class="callout">
                 <h3>The firm maximises revenue when it produces a quantity where <strong>MR = 0</strong></h3>
-                <p>The shaded area is Total Revenue. As Quantity increases, the area expands until it reaches its maximum at Q = 6. At this exact point, the Dashed MR Line crosses the X-axis. Beyond this, any further increase in Quantity causes Total Revenue to fall.</p>
+                <p>The shaded area is Total Revenue. As Quantity increases, the area expands until it reaches its maximum at Q = 5.5. At this exact point, the Dashed MR Line (which is twice as steep as the Price line) crosses the X-axis. Beyond this, any further increase in Quantity causes Total Revenue to fall.</p>
             </div>
         </div>
 
@@ -205,7 +208,6 @@
             <svg width="400" height="300" viewBox="0 0 400 300">
                 <!-- X and Y Axes -->
                 <line x1="40" y1="260" x2="380" y2="260" class="axis" /> 
-                <!-- Extended Y-axis line up to -20 to accommodate the tick at 25 (which is at -15) -->
                 <line x1="40" y1="-20" x2="40" y2="260" class="axis" />  
 
                 <!-- X Axis Ticks and Labels -->
@@ -222,15 +224,15 @@
                 <!-- Revenue Lines -->
                 <!-- P = 22 - 2Q. Start (0,22), End (11,0). -->
                 <line x1="40" y1="18" x2="370" y2="260" class="line-ar" />
-                <!-- Realigned DD label -->
                 <text x="320" y="215" font-family="'Lato', sans-serif" font-size="12" font-weight="700" fill="rgb(35, 31, 32)">DD=P</text>
                 
-                <!-- MR crosses at Q=6. -->
-                <line x1="40" y1="18" x2="220" y2="260" class="line-mr" />
+                <!-- MR = 22 - 4Q. Crosses at Q=5.5. -->
+                <!-- Q=5.5 is at x = 40 + (5.5 * 30) = 205 -->
+                <line x1="40" y1="18" x2="205" y2="260" class="line-mr" />
 
-                <!-- Fixed Point: MR = 0 Marker at Q=6 -->
-                <circle cx="220" cy="260" r="6" class="mr-zero-marker" />
-                <text x="225" y="255" font-family="'Lato', sans-serif" font-size="10" font-weight="400" fill="rgb(47,130,117)">MR=0</text>
+                <!-- Fixed Point: MR = 0 Marker at Q=5.5 -->
+                <circle cx="205" cy="260" r="6" class="mr-zero-marker" />
+                <text x="210" y="255" font-family="'Lato', sans-serif" font-size="10" font-weight="400" fill="rgb(47,130,117)">MR=0</text>
 
                 <!-- Dynamic Point Marker -->
                 <circle id="marker-p" cx="40" cy="40" r="5" fill="black" />
@@ -238,7 +240,7 @@
 
             <div class="controls">
                 <label>Current Quantity: <span id="q-val" style="color:var(--brand-teal); font-size:1.6rem;">0</span></label><br>
-                <input type="range" id="q-slider" min="0" max="10" value="0" step="1">
+                <input type="range" id="q-slider" min="0" max="11" value="0" step="0.5">
             </div>
         </div>
 
@@ -265,18 +267,13 @@
     const yScale = 11; 
 
     const data = [];
-    for (let q = 0; q <= 10; q++) {
+    // Calculate values in 0.5 increments to show the 5.5 peak
+    for (let q = 0; q <= 11; q += 0.5) {
         // P = 22 - 2Q
         let p = 22 - (2 * q);
         let tr = p * q;
-        let mr = "-";
-        
-        // Calculate Discrete Marginal Revenue: TR(q) - TR(q-1)
-        if (q > 0) {
-            let prevP = 22 - (2 * (q - 1));
-            let prevTr = prevP * (q - 1);
-            mr = tr - prevTr;
-        }
+        // MR = 22 - 4Q (Derivative of TR = 22Q - 2Q^2)
+        let mr = 22 - (4 * q);
 
         data.push({ q, p, tr, mr });
     }
@@ -291,7 +288,7 @@
         const xTicks = document.getElementById('x-ticks');
         const yTicks = document.getElementById('y-ticks');
 
-        for (let i = 0; i <= 10; i++) {
+        for (let i = 0; i <= 11; i++) {
             let x = xBase + (i * xScale);
             xTicks.innerHTML += `
                 <line x1="${x}" y1="${yBase}" x2="${x}" y2="${yBase + 5}" stroke="black" />
@@ -299,7 +296,6 @@
             `;
         }
 
-        // Ticks up to 25
         for (let i = 0; i <= 25; i += 5) {
             let y = yBase - (i * yScale);
             yTicks.innerHTML += `
@@ -309,35 +305,39 @@
         }
     }
 
-    tableBody.innerHTML = data.map(d => `
-        <tr id="row-${d.q}">
+    // Populate table (Only show whole numbers and the 5.5 point to keep it concise)
+    tableBody.innerHTML = data
+        .filter(d => d.q % 1 === 0 || d.q === 5.5)
+        .map(d => `
+        <tr id="row-${d.q.toString().replace('.', '_')}">
             <td>${d.q}</td>
-            <td>$${d.p}</td>
-            <td>$${d.tr}</td>
-            <td>${d.mr === "-" ? "-" : (d.mr >= 0 ? "$" + d.mr : "-$" + Math.abs(d.mr))}</td>
+            <td>$${d.p.toFixed(d.q % 1 === 0 ? 0 : 1)}</td>
+            <td>$${d.tr.toFixed(d.q % 1 === 0 ? 0 : 1)}</td>
+            <td>${d.mr >= 0 ? "$" + d.mr.toFixed(0) : "-$" + Math.abs(d.mr).toFixed(0)}</td>
         </tr>
     `).join('');
 
     function update(q) {
-        q = parseInt(q);
-        const d = data[q];
+        q = parseFloat(q);
+        const d = data.find(item => item.q === q);
         qVal.innerText = q;
 
         const w = q * xScale;
         const h = d.p * yScale;
-        trArea.setAttribute('width', w);
-        trArea.setAttribute('height', h);
+        trArea.setAttribute('width', Math.max(0, w));
+        trArea.setAttribute('height', Math.max(0, h));
         trArea.setAttribute('y', yBase - h);
 
         markerP.setAttribute('cx', xBase + w);
         markerP.setAttribute('cy', yBase - h);
 
         document.querySelectorAll('tr').forEach(r => r.classList.remove('highlight', 'max-row'));
-        const row = document.getElementById(`row-${q}`);
-        row.classList.add('highlight');
-        
-        // Highlight row 6 where MR is explicitly 0
-        if (q === 6) row.classList.add('max-row');
+        const rowId = `row-${q.toString().replace('.', '_')}`;
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.classList.add('highlight');
+            if (q === 5.5) row.classList.add('max-row');
+        }
     }
 
     slider.oninput = (e) => update(e.target.value);
